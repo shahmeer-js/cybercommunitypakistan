@@ -3,522 +3,596 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { FaArrowRight, FaShieldAlt, FaLock, FaUsers } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  FaArrowRight, FaTwitter, FaLinkedinIn,
+  FaGithub, FaDiscord, FaStar, FaChevronRight
+} from "react-icons/fa";
 
-// ─── Particle Canvas (circuit network) ──────────────────────
-function ParticleCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const animRef = useRef<number>(0);
+// ─── Types ──────────────────────────────────────────────────
+type Vec3 = { x: number; y: number; z: number };
 
+// ─── Dust Canvas (full page background) ─────────────────────
+function DustCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-
+    const cv = ref.current!;
+    const ctx = cv.getContext("2d")!;
+    let W = 0, H = 0;
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      W = cv.width = window.innerWidth;
+      H = cv.height = window.innerHeight;
     };
     resize();
     window.addEventListener("resize", resize);
-
-    const onMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener("mousemove", onMove);
-
-    type Particle = {
-      x: number; y: number; vx: number; vy: number;
-      radius: number; alpha: number; pulse: number; pulseSpeed: number;
-    };
-
-    const COUNT = 90;
-    const particles: Particle[] = Array.from({ length: COUNT }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      radius: Math.random() * 2 + 1,
-      alpha: Math.random() * 0.6 + 0.2,
-      pulse: Math.random() * Math.PI * 2,
-      pulseSpeed: Math.random() * 0.02 + 0.005,
+    const pts = Array.from({ length: 140 }, () => ({
+      x: Math.random() * 2000, y: Math.random() * 1400,
+      r: Math.random() * 0.9 + 0.2,
+      a: Math.random() * 0.3 + 0.05,
+      vx: (Math.random() - 0.5) * 0.07,
+      vy: (Math.random() - 0.5) * 0.06,
+      ph: Math.random() * Math.PI * 2,
+      ps: Math.random() * 0.007 + 0.002,
     }));
-
-    let frame = 0;
+    let raf: number;
     const draw = () => {
-      frame++;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Mouse repulsion
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-
-      particles.forEach((p) => {
-        p.pulse += p.pulseSpeed;
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-
-        const dx = mx - p.x;
-        const dy = my - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120) {
-          const force = (120 - dist) / 120;
-          p.vx -= (dx / dist) * force * 0.03;
-          p.vy -= (dy / dist) * force * 0.03;
-        }
-        // speed limit
-        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-        if (speed > 1.5) { p.vx *= 0.98; p.vy *= 0.98; }
-
-        const a = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(74,222,74,${a})`;
-        ctx.fill();
+      ctx.clearRect(0, 0, W, H);
+      pts.forEach((p) => {
+        p.ph += p.ps; p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        const a = p.a * (0.5 + 0.5 * Math.sin(p.ph));
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(120,220,120,${a})`; ctx.fill();
       });
-
-      // Draw connections
-      for (let i = 0; i < COUNT; i++) {
-        for (let j = i + 1; j < COUNT; j++) {
-          const a = particles[i], b = particles[j];
-          const dx = a.x - b.x, dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 130) {
-            const alpha = (1 - dist / 130) * 0.35;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(45,122,45,${alpha})`;
-            ctx.lineWidth = 0.6;
-            ctx.stroke();
-          }
-        }
-        // Mouse connections
-        const p = particles[i];
-        const dx = p.x - mx, dy = p.y - my;
-        const md = Math.sqrt(dx * dx + dy * dy);
-        if (md < 160) {
-          const alpha = (1 - md / 160) * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(mx, my);
-          ctx.strokeStyle = `rgba(74,222,74,${alpha})`;
-          ctx.lineWidth = 0.8;
-          ctx.stroke();
-        }
-      }
-
-      // Scan line
-      const scanY = ((frame * 0.8) % (canvas.height + 40)) - 20;
-      const grad = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
-      grad.addColorStop(0, "rgba(74,222,74,0)");
-      grad.addColorStop(0.5, "rgba(74,222,74,0.04)");
-      grad.addColorStop(1, "rgba(74,222,74,0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, scanY - 30, canvas.width, 60);
-
-      animRef.current = requestAnimationFrame(draw);
+      raf = requestAnimationFrame(draw);
     };
-
     draw();
-    return () => {
-      cancelAnimationFrame(animRef.current);
-      window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", onMove);
-    };
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
   }, []);
+  return <canvas ref={ref} className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }} />;
+}
 
+// ─── Sweep Lines Canvas (inside a card) ─────────────────────
+function SweepCanvas({ className }: { className?: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current!;
+    const ctx = cv.getContext("2d")!;
+    const resize = () => {
+      cv.width = cv.offsetWidth;
+      cv.height = cv.offsetHeight;
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(cv);
+    const sweeps = Array.from({ length: 5 }, () => ({
+      y: Math.random() * 800,
+      speed: 0.2 + Math.random() * 0.15,
+      alpha: 0.018 + Math.random() * 0.018,
+      cx: Math.random(),
+      w: 250 + Math.random() * 300,
+    }));
+    let raf: number;
+    const draw = () => {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      sweeps.forEach((s) => {
+        s.y += s.speed;
+        if (s.y > cv.height + 80) { s.y = -80; s.cx = Math.random(); }
+        const cx2 = cv.width * s.cx;
+        const g = ctx.createLinearGradient(0, 0, cv.width, 0);
+        g.addColorStop(0, "rgba(40,140,40,0)");
+        const l = Math.max(0, (cx2 - s.w / 2) / cv.width);
+        const r = Math.min(1, (cx2 + s.w / 2) / cv.width);
+        g.addColorStop(l, "rgba(40,140,40,0)");
+        g.addColorStop(Math.min(1, cx2 / cv.width), `rgba(74,222,74,${s.alpha})`);
+        g.addColorStop(r, "rgba(40,140,40,0)");
+        g.addColorStop(1, "rgba(40,140,40,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, s.y - 1, cv.width, 2);
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  }, []);
   return (
     <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full"
+      ref={ref}
+      className={`absolute inset-0 w-full h-full pointer-events-none rounded-[22px] ${className ?? ""}`}
       style={{ zIndex: 0 }}
     />
   );
 }
 
-// ─── Typing Terminal ────────────────────────────────────────
-const LINES = [
-  "$ Initializing CyberCommunity Pakistan...",
-  "$ Loading threat intelligence matrix...",
-  "$ Connecting 1,200+ security researchers...",
-  "$ Scanning national cyber landscape...",
-  "$ All systems operational. Welcome.",
-];
-
-function Terminal() {
-  const [displayed, setDisplayed] = useState<string[]>([]);
-  const [currentLine, setCurrentLine] = useState(0);
-  const [currentChar, setCurrentChar] = useState(0);
-  const [done, setDone] = useState(false);
-
+// ─── 3D Globe Canvas ─────────────────────────────────────────
+function GlobeCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (done) return;
-    if (currentLine >= LINES.length) { setDone(true); return; }
-    const line = LINES[currentLine];
-    if (currentChar < line.length) {
-      const t = setTimeout(() => setCurrentChar(c => c + 1), 28);
-      return () => clearTimeout(t);
-    } else {
-      const t = setTimeout(() => {
-        setDisplayed(d => [...d, line]);
-        setCurrentLine(l => l + 1);
-        setCurrentChar(0);
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [currentLine, currentChar, done]);
-
-  const activeLine = currentLine < LINES.length ? LINES[currentLine].slice(0, currentChar) : "";
-
+    const cv = ref.current!;
+    const ctx = cv.getContext("2d")!;
+    const S = 300;
+    cv.width = S; cv.height = S;
+    const R = 118;
+    const cx = S / 2, cy = S / 2;
+    const tilt = 0.28;
+    const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
+    const COUNT = 2200;
+    const pts: Vec3[] = Array.from({ length: COUNT }, (_, i) => {
+      const theta = Math.acos(1 - 2 * (i / COUNT));
+      const phi = Math.PI * (1 + Math.sqrt(5)) * i;
+      return { x: theta, y: phi, z: 0 };
+    });
+    let rot = 0, raf: number;
+    const draw = () => {
+      ctx.clearRect(0, 0, S, S);
+      const rendered = pts.map((p) => {
+        const phi2 = p.y + rot;
+        const x3 = R * Math.sin(p.x) * Math.cos(phi2);
+        const y3 = R * Math.sin(p.x) * Math.sin(phi2);
+        const z3 = R * Math.cos(p.x);
+        const y4 = y3 * cosT - z3 * sinT;
+        const z4 = y3 * sinT + z3 * cosT;
+        return { sx: cx + x3, sy: cy + y4, z: z4 };
+      }).sort((a, b) => a.z - b.z);
+      rendered.forEach(({ sx, sy, z }) => {
+        const vis = (z + R) / (2 * R);
+        const a = vis * vis * 0.9;
+        const sz = 0.5 + vis * 1.1;
+        const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sz * 2.5);
+        g.addColorStop(0, `rgba(74,222,74,${a})`);
+        g.addColorStop(1, `rgba(74,222,74,0)`);
+        ctx.beginPath(); ctx.arc(sx, sy, sz, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+      });
+      rot += 0.0038;
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, []);
   return (
-    <div
-      className="rounded-xl p-4 font-mono text-xs leading-relaxed"
-      style={{
-        background: "rgba(6,13,6,0.85)",
-        border: "1px solid rgba(74,222,74,0.2)",
-        backdropFilter: "blur(12px)",
-        minHeight: 148,
-      }}
-    >
-      <div className="flex items-center gap-1.5 mb-3">
-        {["#ef5350","#ffb74d","#4ade4a"].map((c,i) => (
-          <span key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
-        ))}
-        <span className="ml-2 text-[10px]" style={{ color: "#3d6b3d" }}>terminal — ccp_secure_shell</span>
-      </div>
-      {displayed.map((line, i) => (
-        <div key={i} style={{ color: i === displayed.length - 1 && done ? "#4ade4a" : "#86efac" }}>
-          {line}
-        </div>
-      ))}
-      {!done && (
-        <div style={{ color: "#4ade4a" }}>
-          {activeLine}
-          <span className="animate-pulse">▋</span>
-        </div>
-      )}
-    </div>
+    <canvas
+      ref={ref}
+      className="absolute pointer-events-none"
+      style={{ bottom: -60, left: "50%", transform: "translateX(-50%)", opacity: 0.5, zIndex: 0 }}
+    />
   );
 }
 
-// ─── Holographic Floating Card ──────────────────────────────
-function HoloCard({
-  children, delay = 0, floatY = 12,
-}: { children: React.ReactNode; delay?: number; floatY?: number }) {
+// ─── Section Card wrapper ────────────────────────────────────
+function Card({
+  children, className = "", id,
+}: { children: React.ReactNode; className?: string; id?: string }) {
   return (
     <div
-      className="rounded-2xl p-4 backdrop-blur-xl"
+      id={id}
+      className={`relative mx-auto overflow-hidden ${className}`}
       style={{
-        background: "rgba(13,26,13,0.7)",
-        border: "1px solid rgba(74,222,74,0.18)",
-        boxShadow: "0 0 30px rgba(45,122,45,0.12), inset 0 1px 0 rgba(134,239,172,0.08)",
-        animation: `float ${3 + delay}s ease-in-out infinite alternate`,
-        animationDelay: `${delay}s`,
+        background: "rgba(8,16,8,0.82)",
+        border: "1px solid rgba(74,222,74,0.09)",
+        borderRadius: 22,
+        backdropFilter: "blur(2px)",
       }}
     >
+      {/* top highlight */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{ width: 320, height: 1, background: "linear-gradient(90deg,transparent,rgba(74,222,74,0.4),transparent)", zIndex: 1 }}
+      />
       {children}
     </div>
   );
 }
 
-// ─── Main Hero ──────────────────────────────────────────────
-export default function HeroSection() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+// ─── Bracket label ───────────────────────────────────────────
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="inline-block text-[10px] tracking-[.16em] uppercase font-mono"
+      style={{ color: "rgba(74,222,74,0.5)" }}
+    >
+      [ {children} ]
+    </span>
+  );
+}
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const rect = heroRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setMouse({
-        x: ((e.clientX - rect.left) / rect.width - 0.5) * 2,
-        y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
-      });
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+
+export default function Home() {
 
   return (
-    <>
-      <style>{`
-        @keyframes float {
-          from { transform: translateY(0px); }
-          to   { transform: translateY(-14px); }
-        }
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes spin-reverse {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(-360deg); }
-        }
-        @keyframes ping-green {
-          0%   { transform: scale(1); opacity: 0.7; }
-          100% { transform: scale(2.4); opacity: 0; }
-        }
-        @keyframes glitch {
-          0%,100% { clip-path: inset(0 0 100% 0); }
-          10% { clip-path: inset(10% 0 60% 0); transform: translateX(-4px); }
-          20% { clip-path: inset(40% 0 30% 0); transform: translateX(4px); }
-          30% { clip-path: inset(70% 0 5% 0); transform: translateX(-2px); }
-          40% { clip-path: inset(0 0 0 0); transform: translateX(0); }
-        }
-        @keyframes reveal-line {
-          from { width: 0; }
-          to   { width: 100%; }
-        }
-        @keyframes fade-up {
-          from { opacity: 0; transform: translateY(24px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .anim-fade-up { animation: fade-up 0.8s ease forwards; opacity: 0; }
-        .delay-1 { animation-delay: 0.15s; }
-        .delay-2 { animation-delay: 0.3s; }
-        .delay-3 { animation-delay: 0.5s; }
-        .delay-4 { animation-delay: 0.7s; }
-        .delay-5 { animation-delay: 0.9s; }
-        .delay-6 { animation-delay: 1.1s; }
-      `}</style>
+    <main
+      className="min-h-screen w-full overflow-x-hidden"
+      style={{ background: "#060d06" }}
+    >
+      <DustCanvas />
 
-      <section
-        ref={heroRef}
-        className="relative min-h-screen flex items-center overflow-hidden"
-        style={{ background: "#060d06" }}
-      >
-        {/* Particle canvas */}
-        <ParticleCanvas />
+      {/* Aurora beam */}
+      <div
+        className="fixed top-0 left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{
+          width: 380, height: 460,
+          background: "radial-gradient(ellipse 55% 100% at 50% 0%, rgba(45,160,45,0.20) 0%, rgba(20,80,20,0.07) 55%, transparent 100%)",
+          zIndex: 0,
+        }}
+      />
 
-        {/* Deep vignette */}
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1,
-          background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(6,13,6,0.7) 100%)" }} />
+      {/* ─── All sections as cards ──────────────────────────── */}
+      <div className="relative z-10 flex flex-col gap-4 px-3 sm:px-6 pt-6 pb-32 max-w-5xl mx-auto">
 
-        {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ zIndex: 1,
-          background: "linear-gradient(to bottom, transparent, #060d06)" }} />
+        {/* ── HERO ─────────────────────────────────────────── */}
+        <Card id="home">
+          <SweepCanvas />
+          <GlobeCanvas />
 
-        {/* Main content */}
-        <div className="relative max-w-7xl mx-auto w-full px-6 sm:px-8 pt-28 pb-16 grid lg:grid-cols-2 gap-16 items-center" style={{ zIndex: 2 }}>
-
-          {/* ── Left column ─── */}
-          <div className="space-y-7">
-
-            {/* Badge */}
-            <div className="anim-fade-up inline-flex items-center gap-2.5 rounded-full px-4 py-1.5 text-xs font-semibold"
-              style={{ background: "rgba(74,222,74,0.08)", border: "1px solid rgba(74,222,74,0.2)", color: "#4ade4a" }}>
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full opacity-75"
-                  style={{ background: "#4ade4a", animation: "ping-green 1.2s cubic-bezier(0,0,0.2,1) infinite" }} />
-                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "#4ade4a" }} />
+          {/* Top bar */}
+          <div className="relative z-10 flex items-center justify-between px-6 sm:px-8 pt-6">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
+                style={{ border: "1px solid rgba(74,222,74,0.2)", background: "rgba(74,222,74,0.08)" }}
+              >
+                <Image src="/logo.png" alt="CCP" width={26} height={26} className="object-contain" />
+              </div>
+              <span className="text-sm font-semibold tracking-tight" style={{ color: "#f0faf0" }}>
+                Cyber<span style={{ color: "#4ade4a" }}>Community</span> Pakistan
               </span>
-              Pakistan's Rising Cyber Force
-            </div>
+            </Link>
+            <a
+              href="#join"
+              className="hidden sm:flex items-center gap-0 rounded-full overflow-hidden transition-all"
+              style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.3)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)"}
+            >
+              <span className="px-4 py-2 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>Join Now</span>
+              <span
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold m-0.5"
+                style={{ background: "#4ade4a", color: "#060d06" }}
+              >↗</span>
+            </a>
+          </div>
 
-            {/* Headline — glitch + gradient */}
-            <div className="anim-fade-up delay-1 relative">
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.04] tracking-tight"
-                style={{ color: "#f0faf0" }}>
-                Defend.
-                <br />
-                <span className="relative inline-block" style={{
+          {/* Hero content */}
+          <div className="relative z-10 flex flex-col items-center text-center px-6 sm:px-10 pt-14 pb-0">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            >
+              <Label>Pakistan's Cybersecurity Movement</Label>
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+              className="mt-6 font-light leading-[1.1] tracking-tight"
+              style={{ fontSize: "clamp(34px,6vw,60px)", color: "#fff", letterSpacing: -1.5 }}
+            >
+              We are{" "}
+              <strong
+                style={{
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg,#4ade4a,#86efac)",
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                  backgroundImage: "linear-gradient(135deg, #4ade4a 0%, #86efac 40%, #2d7a2d 80%)",
                   backgroundClip: "text",
-                }}>
-                  Inspire.
-                </span>
-                <br />
-                Advance.
-              </h1>
-              {/* Underline reveal */}
-              <div className="mt-3 h-px" style={{
-                background: "linear-gradient(90deg, #4ade4a, transparent)",
-                animation: "reveal-line 1.2s ease 0.5s forwards", width: 0,
-              }} />
-            </div>
-
-            {/* Subtext */}
-            <p className="anim-fade-up delay-2 text-lg max-w-lg leading-relaxed" style={{ color: "#6b9b6b" }}>
-              Pakistan's premier cybersecurity movement — connecting ethical hackers,
-              researchers, and defenders to build a safer digital nation.
-            </p>
-
-            {/* Terminal */}
-            <div className="anim-fade-up delay-3">
-              <Terminal />
-            </div>
-
-            {/* CTAs */}
-            <div className="anim-fade-up delay-4 flex flex-wrap gap-4">
-              <Link href="#join"
-                className="group relative overflow-hidden px-8 py-3.5 font-bold rounded-full flex items-center gap-2 transition-all"
-                style={{ background: "#2d7a2d", color: "#f0faf0", boxShadow: "0 0 0 0 rgba(74,222,74,0)" }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 0 32px rgba(74,222,74,0.35)";
-                  (e.currentTarget as HTMLElement).style.background = "#3a9a3a";
                 }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 0 rgba(74,222,74,0)";
-                  (e.currentTarget as HTMLElement).style.background = "#2d7a2d";
-                }}>
-                {/* Shimmer sweep */}
-                <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)",
-                    backgroundSize: "200%", animation: "shimmer 1s ease" }} />
-                Join Community <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link href="#about"
-                className="px-8 py-3.5 rounded-full transition-all font-medium"
-                style={{ border: "1px solid rgba(134,239,172,0.2)", color: "#86efac" }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.5)";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(74,222,74,0.05)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(134,239,172,0.2)";
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                }}>
-                Explore Mission
-              </Link>
-            </div>
+              >
+                Pakistan's
+              </strong>
+              <br />
+              rising cyber <strong style={{ fontWeight: 700, color: "#fff" }}>defence force</strong>
+            </motion.h1>
 
-            {/* Stats row */}
-            <div className="anim-fade-up delay-5 flex gap-8 pt-2">
-              {[["1,200+","Members"],["24+","Events"],["12+","Experts"]].map(([v, l]) => (
-                <div key={l}>
-                  <p className="text-2xl font-extrabold" style={{ color: "#4ade4a" }}>{v}</p>
-                  <p className="text-xs tracking-widest uppercase" style={{ color: "#3d5c3d" }}>{l}</p>
+            <motion.p
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
+              className="mt-5 text-sm leading-relaxed max-w-md"
+              style={{ color: "rgba(255,255,255,0.32)" }}
+            >
+              Connecting ethical hackers, security researchers, and defenders
+              across Pakistan to build a safer digital nation — backed by Spurvance Labs.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44 }}
+              className="flex gap-3 mt-8 mb-16"
+            >
+              <a
+                href="#join"
+                className="px-6 py-2.5 rounded-md text-sm font-semibold tracking-wide transition-all"
+                style={{ background: "#2d7a2d", color: "#e8f5e8" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#3a9a3a"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 22px rgba(74,222,74,0.28)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#2d7a2d"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              >
+                Join Community &nbsp;→
+              </a>
+              <a
+                href="#about"
+                className="px-6 py-2.5 rounded-md text-sm transition-all"
+                style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.3)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.45)"; }}
+              >
+                Our Mission
+              </a>
+            </motion.div>
+          </div>
+
+          {/* Pillars */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.58 }}
+            className="relative z-10 grid grid-cols-3"
+            style={{ borderTop: "1px solid rgba(74,222,74,0.08)" }}
+          >
+            {[
+              { n: "01", title: "We connect talent", desc: "Networking Pakistan's top security minds with industry leaders and researchers." },
+              { n: "02", title: "We build skills", desc: "Expert sessions, CTF competitions, workshops, and hands-on mentorship." },
+              { n: "03", title: "We grow careers", desc: "Accelerating Pakistan's cyber workforce and national security ecosystem." },
+            ].map((p, i) => (
+              <div
+                key={i}
+                className="px-6 py-5"
+                style={{ borderRight: i < 2 ? "1px solid rgba(74,222,74,0.07)" : "none" }}
+              >
+                <Label>{p.n}</Label>
+                <p className="mt-2 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>{p.title}</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed hidden sm:block" style={{ color: "rgba(255,255,255,0.28)" }}>{p.desc}</p>
+              </div>
+            ))}
+          </motion.div>
+        </Card>
+
+        {/* ── ABOUT ────────────────────────────────────────── */}
+        <Card id="about">
+          <SweepCanvas />
+          <div className="relative z-10 grid sm:grid-cols-2 gap-0">
+            <div className="px-8 py-10" style={{ borderRight: "1px solid rgba(74,222,74,0.08)" }}>
+              <Label>About the Movement</Label>
+              <h2 className="mt-4 font-light leading-tight" style={{ fontSize: "clamp(26px,4vw,40px)", color: "#fff", letterSpacing: -1 }}>
+                A space for<br />
+                <strong
+                  style={{ fontWeight: 700, background: "linear-gradient(135deg,#4ade4a,#86efac)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
+                >
+                  cyber talent
+                </strong>
+              </h2>
+              <p className="mt-4 text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.32)" }}>
+                Backed by Spurvance Labs, CyberCommunity Pakistan creates a
+                collaborative space where security professionals at every level
+                can connect, learn, and grow.
+              </p>
+              <div className="mt-6 flex flex-col gap-3">
+                {["Online events & expert panels", "Hands-on workshops & CTF challenges", "Mentorship & career guidance"].map((item) => (
+                  <div key={item} className="flex items-start gap-2.5 text-[12px]" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#4ade4a" }} />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="px-8 py-10 grid grid-cols-2 gap-3 content-start">
+              {[
+                { v: "1,200+", l: "Members", d: "↑ 12% this month" },
+                { v: "24+", l: "Events run", d: "↑ Next: Jul 2026" },
+                { v: "12+", l: "Expert mentors", d: "↑ Industry leaders" },
+                { v: "8+", l: "Partners", d: "↑ Growing network" },
+              ].map((s) => (
+                <div
+                  key={s.l}
+                  className="rounded-xl p-4"
+                  style={{ background: "rgba(6,13,6,0.7)", border: "1px solid rgba(45,122,45,0.12)" }}
+                >
+                  <p className="text-xl font-bold" style={{ color: "#f0faf0" }}>{s.v}</p>
+                  <p className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: "rgba(255,255,255,0.28)" }}>{s.l}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "#4ade4a" }}>{s.d}</p>
                 </div>
               ))}
             </div>
           </div>
+        </Card>
 
-          {/* ── Right column — orbital shield ─── */}
-          <div className="anim-fade-up delay-6 relative flex items-center justify-center"
-            style={{ transform: `perspective(1000px) rotateY(${mouse.x * 4}deg) rotateX(${-mouse.y * 3}deg)`,
-              transition: "transform 0.12s ease" }}>
-
-            {/* Outer ring — spinning dashes */}
-            <div className="absolute rounded-full"
-              style={{ width: 380, height: 380,
-                border: "1px dashed rgba(45,122,45,0.3)",
-                animation: "spin-slow 20s linear infinite" }} />
-
-            {/* Middle ring */}
-            <div className="absolute rounded-full"
-              style={{ width: 290, height: 290,
-                border: "1px solid rgba(74,222,74,0.12)",
-                animation: "spin-reverse 14s linear infinite" }} />
-
-            {/* Pulsing glow disk */}
-            <div className="absolute rounded-full"
-              style={{ width: 260, height: 260,
-                background: "radial-gradient(circle, rgba(45,122,45,0.18) 0%, transparent 70%)",
-                animation: "float 4s ease-in-out infinite alternate" }} />
-
-            {/* Central shield card */}
-            <div className="relative flex flex-col items-center justify-center rounded-3xl p-8 text-center z-10"
-              style={{ width: 220, height: 220,
-                background: "rgba(11,22,11,0.9)",
-                border: "1px solid rgba(74,222,74,0.25)",
-                boxShadow: "0 0 60px rgba(45,122,45,0.2), inset 0 0 40px rgba(74,222,74,0.03)",
-                backdropFilter: "blur(20px)" }}>
-              <div className="relative mb-3" style={{ width: 80, height: 80 }}>
-                <Image src="/logo.png" alt="CCP Logo" fill className="object-contain drop-shadow-lg" />
+        {/* ── EVENTS ───────────────────────────────────────── */}
+        <Card id="events">
+          <SweepCanvas />
+          <div className="relative z-10 px-8 py-10">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <Label>Upcoming</Label>
+                <h2 className="mt-3 font-light" style={{ fontSize: "clamp(24px,3.5vw,36px)", color: "#fff", letterSpacing: -1 }}>
+                  Events &{" "}
+                  <strong
+                    style={{ fontWeight: 700, background: "linear-gradient(135deg,#4ade4a,#86efac)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
+                  >
+                    Activities
+                  </strong>
+                </h2>
               </div>
-              <p className="font-bold text-sm" style={{ color: "#f0faf0" }}>CyberCommunity</p>
-              <p className="text-xs font-semibold" style={{ color: "#4ade4a" }}>Pakistan</p>
-              <p className="text-[10px] mt-1" style={{ color: "#3d5c3d" }}>Spurvance Labs</p>
+              <span className="text-[11px] hidden sm:block" style={{ color: "rgba(74,222,74,0.4)" }}>[ EXPLORE ]</span>
             </div>
-
-            {/* Orbiting dots on outer ring */}
-            {[0, 90, 180, 270].map((deg, i) => (
-              <div key={i} className="absolute rounded-full"
-                style={{ width: 380, height: 380,
-                  animation: `spin-slow 20s linear infinite`,
-                  transform: `rotate(${deg}deg)` }}>
-                <div className="absolute rounded-full"
-                  style={{ width: 8, height: 8, background: "#4ade4a",
-                    top: "50%", left: -4, marginTop: -4,
-                    boxShadow: "0 0 10px rgba(74,222,74,0.8)" }} />
-              </div>
-            ))}
-
-            {/* Floating holo cards — positioned around the shield */}
-            <div className="absolute" style={{ top: -10, right: -90 }}>
-              <HoloCard delay={0.5}>
-                <div className="flex items-center gap-2">
-                  <FaShieldAlt style={{ color: "#4ade4a", fontSize: 16 }} />
-                  <div>
-                    <p className="text-xs font-bold" style={{ color: "#f0faf0" }}>Threat Intel</p>
-                    <p className="text-[10px]" style={{ color: "#4ade4a" }}>Live feed active</p>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {[
+                { n: "01", title: "Launch Webinar", date: "July 2026", desc: "Kickoff session with Pakistan's top security leaders and industry voices." },
+                { n: "02", title: "CTF Season 3", date: "August 2026", desc: "Open capture-the-flag competition for all experience levels nationwide." },
+                { n: "03", title: "Career Conclave", date: "September 2026", desc: "Connect with top employers and senior mentors in cybersecurity." },
+              ].map((ev, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl p-5 group cursor-pointer transition-all duration-300"
+                  style={{ background: "rgba(6,13,6,0.6)", border: "1px solid rgba(45,122,45,0.12)" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.28)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(45,122,45,0.12)"}
+                >
+                  <Label>{ev.n}</Label>
+                  <p className="mt-3 text-sm font-semibold" style={{ color: "#f0faf0" }}>{ev.title}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "rgba(255,255,255,0.28)" }}>{ev.desc}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span
+                      className="text-[10px] font-mono px-2 py-0.5 rounded"
+                      style={{ background: "rgba(74,222,74,0.08)", color: "#4ade4a", border: "1px solid rgba(74,222,74,0.15)" }}
+                    >
+                      {ev.date}
+                    </span>
+                    <FaChevronRight className="text-[10px]" style={{ color: "rgba(74,222,74,0.4)" }} />
                   </div>
                 </div>
-              </HoloCard>
-            </div>
-
-            <div className="absolute" style={{ bottom: 10, right: -80 }}>
-              <HoloCard delay={1.2}>
-                <div className="flex items-center gap-2">
-                  <FaUsers style={{ color: "#86efac", fontSize: 14 }} />
-                  <div>
-                    <p className="text-xs font-bold" style={{ color: "#f0faf0" }}>1,200+</p>
-                    <p className="text-[10px]" style={{ color: "#6b9b6b" }}>researchers online</p>
-                  </div>
-                </div>
-              </HoloCard>
-            </div>
-
-            <div className="absolute" style={{ bottom: 30, left: -95 }}>
-              <HoloCard delay={0.8}>
-                <div className="flex items-center gap-2">
-                  <FaLock style={{ color: "#4ade4a", fontSize: 14 }} />
-                  <div>
-                    <p className="text-xs font-bold" style={{ color: "#f0faf0" }}>CTF Season 3</p>
-                    <p className="text-[10px]" style={{ color: "#4ade4a" }}>Aug 2026</p>
-                  </div>
-                </div>
-              </HoloCard>
+              ))}
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Bottom scrolling marquee */}
-        <div className="absolute bottom-0 left-0 right-0 overflow-hidden py-3 border-t"
-          style={{ zIndex: 2, borderColor: "rgba(45,122,45,0.15)", background: "rgba(6,13,6,0.8)",
-            backdropFilter: "blur(10px)" }}>
-          <div className="flex gap-12 whitespace-nowrap"
-            style={{ animation: "marquee 22s linear infinite" }}>
-            {Array(3).fill(0).map((_, ri) => (
-              <div key={ri} className="flex gap-12 shrink-0">
-                {["Network Security","Ethical Hacking","Threat Analysis","CTF Competitions","Penetration Testing","Incident Response","Malware Analysis","OSINT","Bug Bounty"].map((t) => (
-                  <span key={t} className="text-xs font-mono tracking-widest uppercase"
-                    style={{ color: "#3d6b3d" }}>
-                    <span style={{ color: "#2d7a2d", marginRight: 8 }}>◆</span>{t}
+        {/* ── COMMUNITY / TESTIMONIALS ─────────────────────── */}
+        <Card id="community">
+          <SweepCanvas />
+          <div className="relative z-10 px-8 py-10">
+            <Label>Community</Label>
+            <h2 className="mt-3 mb-7 font-light" style={{ fontSize: "clamp(24px,3.5vw,36px)", color: "#fff", letterSpacing: -1 }}>
+              What our{" "}
+              <strong
+                style={{ fontWeight: 700, background: "linear-gradient(135deg,#4ade4a,#86efac)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
+              >
+                members say
+              </strong>
+            </h2>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {[
+                { name: "Aisha Khan", role: "Security Researcher", av: "AK", quote: "This community has been instrumental in my growth. The knowledge sharing here is unparalleled." },
+                { name: "Bilal Ahmed", role: "Penetration Tester", av: "BA", quote: "Finally, a place where Pakistan's cyber talent can come together and build something meaningful." },
+                { name: "Sarah Mahmood", role: "Cybersecurity Student", av: "SM", quote: "The mentorship here gave me real clarity on my career path in less than three months." },
+              ].map((t, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl p-5 transition-all duration-300"
+                  style={{ background: "rgba(6,13,6,0.6)", border: "1px solid rgba(45,122,45,0.12)" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.25)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(45,122,45,0.12)"}
+                >
+                  <div className="flex gap-0.5 mb-3">
+                    {[...Array(5)].map((_, j) => <FaStar key={j} className="text-[10px]" style={{ color: "#4ade4a" }} />)}
+                  </div>
+                  <p className="text-[12px] leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>"{t.quote}"</p>
+                  <div className="flex items-center gap-2.5 mt-4 pt-4" style={{ borderTop: "1px solid rgba(45,122,45,0.1)" }}>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                      style={{ background: "rgba(45,122,45,0.25)", color: "#4ade4a" }}
+                    >
+                      {t.av}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold" style={{ color: "#f0faf0" }}>{t.name}</p>
+                      <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.28)" }}>{t.role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* ── CTA ──────────────────────────────────────────── */}
+        <Card id="join">
+          <SweepCanvas />
+          <div className="relative z-10 flex flex-col items-center text-center px-8 py-14">
+            <Label>Ready to join?</Label>
+            <h2 className="mt-4 font-light leading-tight" style={{ fontSize: "clamp(28px,4.5vw,48px)", color: "#fff", letterSpacing: -1.5 }}>
+              Be part of the{" "}
+              <strong
+                style={{ fontWeight: 700, background: "linear-gradient(135deg,#4ade4a,#86efac)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}
+              >
+                movement
+              </strong>
+            </h2>
+            <p className="mt-4 text-sm max-w-md" style={{ color: "rgba(255,255,255,0.32)" }}>
+              Join CyberCommunity Pakistan today and help shape the future of cybersecurity across the nation.
+            </p>
+            <div className="flex gap-3 mt-8">
+              <a
+                href="#"
+                className="px-8 py-3 rounded-md text-sm font-semibold tracking-wide transition-all"
+                style={{ background: "#2d7a2d", color: "#e8f5e8" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#3a9a3a"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 28px rgba(74,222,74,0.3)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#2d7a2d"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+              >
+                Join Now &nbsp;→
+              </a>
+              <a
+                href="#"
+                className="px-8 py-3 rounded-md text-sm transition-all"
+                style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.3)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.45)"; }}
+              >
+                Learn More
+              </a>
+            </div>
+          </div>
+        </Card>
+
+        {/* ── FOOTER ───────────────────────────────────────── */}
+        <Card>
+          <SweepCanvas />
+          <div className="relative z-10 px-8 py-8">
+            <div className="grid sm:grid-cols-4 gap-8">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0"
+                    style={{ border: "1px solid rgba(74,222,74,0.18)", background: "rgba(74,222,74,0.06)" }}>
+                    <Image src="/logo.png" alt="CCP" width={28} height={28} className="object-contain" />
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: "#f0faf0" }}>
+                    Cyber<span style={{ color: "#4ade4a" }}>Community</span>PK
                   </span>
-                ))}
+                </div>
+                <p className="text-[11px] leading-relaxed" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  A Project of Spurvance Labs — building Pakistan's cybersecurity future.
+                </p>
               </div>
-            ))}
+              {[
+                { title: "Navigate", links: ["About", "Mission", "Events", "Community"] },
+                { title: "Resources", links: ["Blog", "Events", "Careers"] },
+              ].map((col) => (
+                <div key={col.title}>
+                  <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: "rgba(74,222,74,0.4)" }}>{col.title}</p>
+                  <ul className="space-y-2">
+                    {col.links.map((l) => (
+                      <li key={l}>
+                        <a
+                          href="#"
+                          className="text-xs transition-colors"
+                          style={{ color: "rgba(255,255,255,0.28)" }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "rgba(74,222,74,0.8)"}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.28)"}
+                        >
+                          {l}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: "rgba(74,222,74,0.4)" }}>Connect</p>
+                <div className="flex gap-2">
+                  {[FaTwitter, FaLinkedinIn, FaGithub, FaDiscord].map((Icon, i) => (
+                    <a
+                      key={i}
+                      href="#"
+                      className="w-7 h-7 rounded-md flex items-center justify-center transition-all"
+                      style={{ background: "rgba(6,13,6,0.8)", border: "1px solid rgba(45,122,45,0.18)" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(74,222,74,0.35)"; (e.currentTarget as HTMLElement).style.background = "rgba(74,222,74,0.08)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(45,122,45,0.18)"; (e.currentTarget as HTMLElement).style.background = "rgba(6,13,6,0.8)"; }}
+                    >
+                      <Icon className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 pt-5 flex items-center justify-between text-[10px]"
+              style={{ borderTop: "1px solid rgba(45,122,45,0.1)", color: "rgba(255,255,255,0.18)" }}>
+              <span>© {new Date().getFullYear()} CyberCommunityPakistan · Spurvance Labs</span>
+              <span style={{ color: "rgba(74,222,74,0.25)" }}>PK · EST. 2025</span>
+            </div>
           </div>
-        </div>
-        <style>{`
-          @keyframes marquee {
-            from { transform: translateX(0); }
-            to   { transform: translateX(-33.333%); }
-          }
-          @keyframes shimmer {
-            from { background-position: 200% center; }
-            to   { background-position: -200% center; }
-          }
-        `}</style>
-      </section>
-    </>
+        </Card>
+      </div>
+
+    </main>
   );
 }
