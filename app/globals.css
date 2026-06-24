@@ -1,1 +1,61 @@
 @import "tailwindcss";
+
+@theme inline {
+  /* Fonts */
+  --font-mono: var(--font-mono), monospace;
+  --font-serif: "Courier Prime", "Courier New", serif;
+
+  /* Color Palette */
+  --color-bg-main: #0f0f12;
+  --color-foreground-main: #f8f9fa;
+  --color-card-main: #15151a;
+  --color-card-hover: #1c1c24;
+  --color-card-stroke: #22222b;
+  --color-accent-main: #ffffff;
+  --color-accent-muted: #8a8a93;
+  --color-terminal-green: #00ff66;
+  --color-terminal-amber: #ffb700;
+  --color-terminal-blue: #00d2ff;
+
+  --animate-pulse-slow: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-main);
+    color: var(--color-foreground-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--color-accent-main);
+  }
+}
+
+@layer utilities {
+  .text-hero-title {
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+
+  .text-section-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .text-code-sm {
+    font-size: 0.8125rem;
+  }
+
+  .terminal-card {
+    background-color: var(--color-card-main);
+    border: 1px solid var(--color-card-stroke);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
