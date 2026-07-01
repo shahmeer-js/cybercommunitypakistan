@@ -1,11 +1,26 @@
+export interface Registration {
+  id: number;
+  eventId: number;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  profession: string;
+  instituteName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface EventData {
-  id: string;
-  status: "LIVE" | "REGISTRATION OPEN" | "UPCOMING";
-  slug: string;
-  timeDate: string;
+  id: number;
   title: string;
+  slug: string;
   description: string;
+  venue: string;
+  dateTime: string;
+  createdAt: string;
+  updatedAt: string;
+
   image?: string;
-  totalParticipants: number;
-  seatsLeft: number;
+  timeDate?: string;
+  totalParticipants?: number;
 }

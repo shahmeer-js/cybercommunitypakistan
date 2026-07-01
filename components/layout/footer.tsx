@@ -3,66 +3,42 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LuGithub, LuLock, LuTerminal } from "react-icons/lu";
 import { CgArrowRight } from "react-icons/cg";
 
 export default function Footer() {
   const resourceLinks = [
-    { name: "./github_repos", href: "/repos" },
-    { name: "./whitepapers", href: "/whitepapers" },
-    { name: "./incident_report", href: "/incident-report" },
+    { name: "./github_repos", href: "https://github.com/spurvancelabs" }
   ];
 
   return (
-    <footer className="bg-[#0f0f12] px-6 py-16 border-[#22222b]/40 border-t w-full font-mono text-[#8a8a93]">
-      <div className="items-start gap-12 md:gap-6 grid grid-cols-1 md:grid-cols-12 mx-auto max-w-7xl">
+    <footer className="w-full border-t border-card-stroke bg-bg-main px-6 py-16 font-mono text-accent-muted">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-12 sm:grid-cols-2 md:grid-cols-12 md:gap-6">
+        
         {/* Left Column: Brand & Description */}
         <div className="space-y-6 md:col-span-4">
           <div className="flex items-center gap-2">
             <Image
               src="/logo.png"
               alt="CCP Logo"
-              className="opacity-90 invert"
+              className="invert opacity-90"
               width={20}
               height={20}
             />
-            <span className="font-bold text-[#f8f9fa] text-sm uppercase tracking-wider">
+            <span className="text-sm font-bold uppercase tracking-wider text-foreground-main">
               CCP
             </span>
           </div>
 
-          <p className="opacity-80 max-w-xs font-normal text-xs leading-relaxed">
+          <p className="max-w-xs text-xs font-normal leading-relaxed opacity-80">
             Pakistan&apos;s premier cybersecurity community dedicated to fostering
             innovation, security awareness, and technical expertise across the
             digital landscape.
           </p>
-
-          {/* Social / Terminal Glyph Shortcuts */}
-          <div className="flex items-center gap-4 text-[#8a8a93]/70">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#f8f9fa] transition-colors"
-            >
-              <LuGithub className="w-4 h-4" />
-            </a>
-            <a
-              href="#secure"
-              className="hover:text-[#f8f9fa] transition-colors"
-            >
-              <LuLock className="w-4 h-4" />
-            </a>
-            <div className="flex items-center gap-0.5 font-bold hover:text-[#f8f9fa] text-xs transition-colors cursor-pointer">
-              <LuTerminal className="w-4 h-4" />
-              <span className="-mt-1 text-[10px]">_</span>
-            </div>
-          </div>
         </div>
 
         {/* Middle Column: Links */}
         <div className="space-y-4 md:col-span-4">
-          <h4 className="font-bold text-[#f8f9fa] text-[11px] uppercase tracking-widest">
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-foreground-main">
             Resources
           </h4>
           <ul className="space-y-2.5 text-xs">
@@ -70,7 +46,7 @@ export default function Footer() {
               <li key={link.name}>
                 <Link
                   href={link.href}
-                  className="block opacity-80 hover:opacity-100 hover:text-[#f8f9fa] transition-colors duration-150"
+                  className="block opacity-80 transition-colors duration-150 hover:text-foreground-main hover:opacity-100"
                 >
                   {link.name}
                 </Link>
@@ -81,33 +57,35 @@ export default function Footer() {
 
         {/* Right Column: Contact & Copyright */}
         <div className="space-y-4 md:col-span-4">
-          <h4 className="font-bold text-[#f8f9fa] text-[11px] uppercase tracking-widest">
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-foreground-main">
             Contact & Verify
           </h4>
 
           <div className="space-y-2">
-            <span className="block font-bold text-[#8a8a93]/60 text-[10px] uppercase tracking-wider">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-accent-muted/50">
               Main Company Web
             </span>
-            {/* Main Company Web */}
-            <div className="flex bg-[#050507] p-3 border border-[#22222b] overflow-x-auto font-bold text-[#f8f9fa] text-[10px] tracking-wider whitespace-nowrap select-all items-center justify-center gap-1">
-              Spurvance Labs - An open source IT related company
-              <span
-                className="text-[#8a8a93]/60 hover:text-[#f8f9fa] transition-colors cursor-pointer"
-                onClick={() =>
-                  window.open("https://spurvancelabs.com", "_blank")
-                }
-              >
-                <CgArrowRight size={20} />
+            
+            {/* Semantic Access Block Wrapper */}
+            <a
+              href="https://spurvancelabs.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between border border-card-stroke bg-card-main p-3 text-[10px] font-bold tracking-wider text-foreground-main transition-colors hover:border-accent-muted/40"
+            >
+              <span className="truncate pr-2">
+                Spurvance Labs - An open source IT related company
               </span>
-            </div>
+              <CgArrowRight className="h-4 w-4 shrink-0 text-accent-muted/60 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground-main" />
+            </a>
           </div>
 
-          <div className="space-y-0.5 pt-2 text-[#8a8a93]/50 text-[10px] leading-relaxed">
+          <div className="pt-2 text-[10px] leading-relaxed text-accent-muted/40">
             <p>© 2026 Cyber Community Pakistan.</p>
             <p>All rights reserved. Secure transmission active.</p>
           </div>
         </div>
+
       </div>
     </footer>
   );

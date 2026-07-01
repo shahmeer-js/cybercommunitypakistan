@@ -1,3 +1,4 @@
+import Link from "next/link";
 import React from "react";
 import { LuActivity } from "react-icons/lu";
 
@@ -9,7 +10,7 @@ export default function CompactHeroSection() {
         <div className="inline-flex items-center gap-2 bg-card-main/60 px-4 py-1.5 border border-card-stroke rounded-full text-[10px] uppercase tracking-widest text-accent-muted/90">
           <LuActivity className="w-3 h-3 text-terminal-green animate-pulse" />
           <span>
-            System Status:{" "}
+            System Status:
             <span className="font-bold text-terminal-green">Operational</span>
           </span>
         </div>
@@ -44,15 +45,17 @@ export default function CompactHeroSection() {
 
       {/* Action buttons at the bottom */}
       <div className="flex sm:flex-row flex-col justify-center items-center gap-4 sm:gap-6">
-        <button
-          type="button"
-          className="bg-transparent hover:bg-foreground-main px-6 py-2.5 border border-foreground-main w-full sm:w-auto font-bold text-foreground-main hover:text-bg-main text-xs uppercase tracking-wider active:scale-[0.98] transition-all duration-200 cursor-pointer"
-        >
-          JOIN THE COMMUNITY
-        </button>
+        <Link href={"/community"}>
+          <button
+            type="button"
+            className="bg-transparent hover:bg-foreground-main px-6 py-2.5 border border-foreground-main w-full sm:w-auto font-bold text-foreground-main hover:text-bg-main text-xs uppercase tracking-wider active:scale-[0.98] transition-all duration-200 cursor-pointer"
+          >
+            JOIN THE COMMUNITY
+          </button>
+        </Link>
 
         <a
-          href="#docs"
+          href="#"
           className="group flex items-center gap-1.5 py-2 font-medium hover:text-foreground-main text-xs transition-colors text-accent-muted/70"
         >
           view_documentation
